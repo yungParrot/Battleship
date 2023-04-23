@@ -2,7 +2,6 @@ package main
 
 import (
 	"battleship/battleship"
-	"battleship/http"
 	"fmt"
 	"github.com/manifoldco/promptui"
 )
@@ -12,6 +11,9 @@ type Option struct {
   Name string
   Description string
 }
+
+
+const gameURL string = "https://go-pjatk-server.fly.dev/api/game"
 
 
 func main() {
@@ -25,6 +27,7 @@ func main() {
       },
     }
     _, option, err := mainPrompt.Run()
+    fmt.Print("\033[H\033[2J")
     if err != nil {
       fmt.Printf("Prompt failed %v\n", err)
       return
@@ -37,13 +40,8 @@ func main() {
       fmt.Println("\tn - create a new game")
       fmt.Println("\tq - quit the app")
     case "n":
-      gameUrl := "https://go-pjatk-server.fly.dev/api/game"
-      authToken := http.InitGame(gameUrl)
-      fmt.Printf("Token %v\n", authToken)
-      rawPositions, _ := http.Board(gameUrl, authToken)
-      yourCoords := battleship.ConvertToCoordinates(rawPositions)
-      opponentsCoords := make(map[string]battleship.Coordinate)
-      battleship.DisplayBoard(&yourCoords, &opponentsCoords)
+      battleship.Game(gameURL)
+      return
     case "q":
       fmt.Println("Leaving the game...")
       return
