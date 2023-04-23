@@ -23,6 +23,11 @@ type GetGameInfoDTO struct {
 }
 
 
+type FireAtOppDTO struct {
+  Result string `json:"result"`
+}
+
+
 func SendGetRequest(URL string, authToken string) ([]byte, error) {
   client := &http.Client{}
   req, err := http.NewRequest("GET", URL, nil)
@@ -45,6 +50,32 @@ func SendGetRequest(URL string, authToken string) ([]byte, error) {
     return nil, err
   }
   return body, nil
+}
+
+
+func SendPostRequest(URL string, authToken string, data []byte) ([]byte, error) {
+  client := &http.Client{}
+  req, err := http.NewRequest("POST", URL, bytes.NewBuffer(data))
+  if err != nil {
+    fmt.Printf("Error: %s", err)
+    return nil, err
+  }
+  req.Header.Add("Accept", `application/json`)
+  req.Header.Add("X-Auth-Token", authToken)
+  resp, err := client.Do(req); 
+  if err != nil {
+    fmt.Printf("Error: %s", err)
+    return nil, err
+  }
+  defer resp.Body.Close()
+
+  body, err := ioutil.ReadAll(resp.Body)
+  if err != nil {
+    fmt.Printf("Error: %s", err)
+    return nil, err
+  }
+  return body, nil
+  
 }
 
 
@@ -114,4 +145,21 @@ func GetGameDescription(gameURL string, authToken string) (GetGameInfoDTO, error
     return GetGameInfoDTO{}, err
   }
   return gameDesc, err
+}
+
+
+func FireAtOpp(gameURL string, authToken string, coord string) (FireAtOppDTO, error) {
+  postData := map[string]string{"coord": coord}
+  postBody, err := json.Marshal(postData)
+  if err != nil {
+    fmt.Printf("Error: %s", err)
+    return FireAtOppDTO{Result: "Failed"}, err
+  }
+  data, err := SendPostRequest(gameURL + "/fire", authToken, postBody)
+  var result FireAtOppDTO
+  if err := json.Unmarshal(data, &result); err != nil {
+    fmt.Printf("FireAtOpp error: %s\n", err)
+    return FireAtOppDTO{Result: "Failed"}, err
+  }
+  return result, err
 }
