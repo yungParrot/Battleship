@@ -46,7 +46,7 @@ func main() {
       fmt.Println("Leaving the game...")
       return
     default:
-      fmt.Println("Unknown option %s", option)
+      fmt.Printf("Unknown option %s\n", option)
     }
   }
 }
