@@ -33,7 +33,7 @@ func ConvertToCoordinates(rawCoordinates []string) map[string]Coordinate {
 }
 
 
-func DisplayBoard(coordinates map[string]Coordinate) {
+func DisplayBoard(coordinates *map[string]Coordinate) {
   rows := getRows()
   columns := getColumns()
   for _, row := range rows {
@@ -42,7 +42,7 @@ func DisplayBoard(coordinates map[string]Coordinate) {
     color.Unset()
     for _, column := range columns {
       position := column + row
-      if _, found := coordinates[position]; found {
+      if _, found := (*coordinates)[position]; found {
         fmt.Printf("%2s", "X")
         continue
       }
