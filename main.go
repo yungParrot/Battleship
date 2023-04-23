@@ -1,25 +1,52 @@
 package main
 
-
 import (
-  "fmt"
-  "battleship/http"
-  "battleship/battleship"
-  "github.com/fatih/color"
+	"battleship/battleship"
+	"fmt"
+	"github.com/manifoldco/promptui"
 )
 
 
+type Option struct {
+  Name string
+  Description string
+}
+
+
+const gameURL string = "https://go-pjatk-server.fly.dev/api/game"
+
+
 func main() {
-  gameUrl := "https://go-pjatk-server.fly.dev/api/game"
-  authToken := http.InitGame(gameUrl)
-  fmt.Printf("Token %v\n", authToken)
-  rawPositions, _ := http.Board(gameUrl, authToken)
-  coordinates := battleship.ConvertToCoordinates(rawPositions)
+  for {
+    mainPrompt := promptui.Select{
+      Label: "Select an option",
+      Items: []string{
+        "h",
+        "n",
+        "q",
+      },
+    }
+    _, option, err := mainPrompt.Run()
+    fmt.Print("\033[H\033[2J")
+    if err != nil {
+      fmt.Printf("Prompt failed %v\n", err)
+      return
+    }
 
-  color.Blue("\nYour board")
-  battleship.DisplayBoard(&coordinates)
-
-  color.Red("\nYour oponent's board")
-  enemyBoard := make(map[string]battleship.Coordinate)
-  battleship.DisplayBoard(&enemyBoard)
+    switch option {
+    case "h":
+      fmt.Println("Help:")
+      fmt.Println("\th - display this help")
+      fmt.Println("\tn - create a new game")
+      fmt.Println("\tq - quit the app")
+    case "n":
+      battleship.Game(gameURL)
+      return
+    case "q":
+      fmt.Println("Leaving the game...")
+      return
+    default:
+      fmt.Println("Unknown option %s", option)
+    }
+  }
 }
