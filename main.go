@@ -4,6 +4,7 @@ import (
 	"battleship/battleship"
 	"fmt"
 	"github.com/manifoldco/promptui"
+  "github.com/grupawp/warships-lightgui/v2"
 )
 
 
@@ -40,7 +41,8 @@ func main() {
       fmt.Println("\tn - create a new game")
       fmt.Println("\tq - quit the app")
     case "n":
-      battleship.Game(gameURL)
+      cfg := board.NewConfig()
+      battleship.Game(gameURL, cfg)
       return
     case "q":
       fmt.Println("Leaving the game...")

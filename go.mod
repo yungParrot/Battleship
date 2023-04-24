@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/fatih/color v1.15.0
+	github.com/grupawp/warships-lightgui/v2 v2.0.0
 	github.com/manifoldco/promptui v0.9.0
 )
 

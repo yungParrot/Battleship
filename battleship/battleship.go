@@ -5,22 +5,16 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
+  "github.com/grupawp/warships-lightgui/v2"
 )
 
 
-type Coordinate struct {
-  column string 
-  row string
-}
-
-
 func getColumns() []string {
-  return []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "K", "J"}
+  return []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
 }
 
 func getRows() []string { return []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
@@ -45,124 +39,64 @@ func ValidateCoords(rawCoordinate string) bool {
 }
 
 
-func ConvertToCoordinates(rawCoordinates []string) map[string]Coordinate {
-  coordinates := make(map[string]Coordinate)
-  for _, rawCoordinate := range rawCoordinates {
-    column, row, _ := strings.Cut(rawCoordinate, "")
-    coordinates[rawCoordinate] = Coordinate{column, row}
-  }
-  return coordinates
+func createBorder(gameBoard *board.Board, shipCoords []string) {
+
+  gameBoard.CreateBorder()
+
 }
 
 
 func DisplayBoard(
-  yourCoords *map[string]Coordinate,
-  yourShots *map[string]Coordinate,
-  opponentsCoords *map[string]Coordinate,
-  opponentsShots *map[string]Coordinate,
+  gameBoard *board.Board,
+  yourCoords []string,
+  yourShots []string,
+  opponentsCoords []string,
+  opponentsShots []string,
 ) {
-  rows := getRows()
-  columns := getColumns()
-  for _, row := range rows {
-    color.Set(color.BgBlue)
-    fmt.Printf("%2s", row)
-    color.Unset()
-    for _, column := range columns {
-      position := column + row
-      _, yoursFound := (*yourCoords)[position] 
-      _, oppsFound := (*opponentsShots)[position] 
-      if yoursFound && oppsFound {
-        color.Set(color.FgRed)
-        fmt.Printf("%2s", "X")
-        color.Unset()
-        continue
-      }
-      if yoursFound {
-        fmt.Printf("%2s", "X")
-        continue
-      }
-      if oppsFound {
-        fmt.Printf("%2s", "o")
-        continue
-      }
-      fmt.Printf("%2s", "-")
-    }
-
-    fmt.Printf("%2s", "\t|\t")
-
-    color.Set(color.BgRed)
-    fmt.Printf("%2s", row)
-    color.Unset()
-    for _, column := range columns {
-      position := column + row
-      _, yoursFound := (*yourShots)[position] 
-      _, oppsFound := (*opponentsCoords)[position] 
-      if yoursFound && oppsFound {
-        color.Set(color.FgGreen)
-        fmt.Printf("%2s", "X")
-        color.Unset()
-        continue
-      }
-      if yoursFound {
-        fmt.Printf("%2s", "o")
-        continue
-      }
-      if oppsFound {
-        fmt.Printf("%2s", "O")
-        continue
-      }
-      fmt.Printf("%2s", "-")
-    }
-    fmt.Println()
+  for _, coord := range yourCoords {
+    gameBoard.Set(board.Left, coord, board.Ship)
   }
-  color.Set(color.BgBlue)
-  fmt.Printf("%3s", "")
-  for _, column := range columns {
-    fmt.Printf("%s ", column)
+  for _, coord := range opponentsCoords {
+    gameBoard.Set(board.Right, coord, board.Ship)
   }
-  color.Unset()
-
-  fmt.Printf("%2s", "\t|\t")
-
-  color.Set(color.BgRed)
-  fmt.Printf("%3s", "")
-  for _, column := range columns {
-    fmt.Printf("%s ", column)
+  for _, coord := range yourShots {
+    state, _ := gameBoard.HitOrMiss(board.Right, coord)
+    gameBoard.Set(board.Right, coord, state)
   }
-  color.Unset()
-
-  fmt.Println()
+  for _, coord := range opponentsShots {
+    state, _ := gameBoard.HitOrMiss(board.Left, coord)
+    gameBoard.Set(board.Left, coord, state)
+  }
+  gameBoard.Display()
 }
 
 
 func DisplayPlayers(status *http.GetGameInfoDTO) {
   fmt.Printf("You: %-25s", status.Nick)
-  fmt.Print("\t|\t")
   fmt.Printf("Opp: %s\n", status.Opponent)
   if status.ShouldFire {
     color.Set(color.BgBlue)
     fmt.Printf("Your turn")
     color.Unset()
     fmt.Printf("%-21s", "")
-    fmt.Print("\t|\t\n")
+    fmt.Println()
   } else {
     fmt.Printf("%-30s", "")
-    fmt.Print("\t|\t")
     color.Set(color.BgRed)
     fmt.Printf("Opp's turn\n")
     color.Unset()
   }
 }
 
-func Game(gameURL string) {
+func Game(gameURL string, config *board.Config) {
   authToken := http.InitGame(gameURL)
   fmt.Printf("Token %v\n", authToken)
   time.Sleep(time.Second)
 
   acceptedGameStatus := "game_in_progress"
   var gameInfo http.GetGameInfoDTO
-  var oppRawCoords []string
-  var yourRawShots []string
+  var oppCoords []string
+  var yourShots []string
   for gameInfo.GameStatus != acceptedGameStatus {
     gameInfo, _ = http.GetGameStatus(gameURL, authToken)   
     fmt.Print("\033[H\033[2J")
@@ -172,27 +106,25 @@ func Game(gameURL string) {
   fmt.Print("\033[H\033[2J")
   fmt.Printf("Token %v\n", authToken)
 
+  gameBoard := board.New(config)
+
+  yourCoords, _ := http.Board(gameURL, authToken)
+  oppShots := gameInfo.OppShots
+
+  DisplayBoard(gameBoard, yourCoords, yourShots, oppCoords, oppShots)
   DisplayPlayers(&gameInfo)
-
-  yourRawCoords, _ := http.Board(gameURL, authToken)
-  yourCoords := ConvertToCoordinates(yourRawCoords)
-  yourShots := ConvertToCoordinates(yourRawShots)
-  opponentsCoords := ConvertToCoordinates(oppRawCoords)
-  oppShots := ConvertToCoordinates(gameInfo.OppShots)
-
-  DisplayBoard(&yourCoords, &yourShots, &opponentsCoords, &oppShots)
   for {
     if !gameInfo.ShouldFire {
       gameInfo, _ = http.GetGameStatus(gameURL, authToken)   
       time.Sleep(time.Second)
       fmt.Print("\033[H\033[2J")
+      oppShots := gameInfo.OppShots
+      DisplayBoard(gameBoard, yourCoords, yourShots, oppCoords, oppShots)
       DisplayPlayers(&gameInfo)
-      oppShots := ConvertToCoordinates(gameInfo.OppShots)
-      DisplayBoard(&yourCoords, &yourShots, &opponentsCoords, &oppShots)
       fmt.Printf("Opp shot at %q", gameInfo.OppShots)
       continue
     }
-    gamePrompt := promptui.Selec{
+    gamePrompt := promptui.Select{
       Label: "Select an option\n",
       Items: []string{  
         "h",
@@ -216,6 +148,7 @@ func Game(gameURL string) {
       fmt.Println("\tf - fire at the opp")
       fmt.Println("\tq - quit the app")
     case "i":
+      // TODO: this should be displayed later
       gameDesc, _ := http.GetGameDescription(gameURL, authToken)   
       fmt.Printf("You: %s\n", gameDesc.Nick)
       fmt.Printf("%s\n", gameDesc.Desc)
@@ -224,11 +157,9 @@ func Game(gameURL string) {
     case "f":
       stillShooting := true
       for stillShooting {
+        oppShots = gameInfo.OppShots
+        DisplayBoard(gameBoard, yourCoords, yourShots, oppCoords, oppShots)
         DisplayPlayers(&gameInfo)
-        yourShots = ConvertToCoordinates(yourRawShots)
-        opponentsCoords = ConvertToCoordinates(oppRawCoords)
-        oppShots = ConvertToCoordinates(gameInfo.OppShots)
-        DisplayBoard(&yourCoords, &yourShots, &opponentsCoords, &oppShots)
         fmt.Print("Coords [A-J][1-10] ↩️: ")
         scanner := bufio.NewScanner(os.Stdin)
         scanner.Scan()
@@ -241,12 +172,14 @@ func Game(gameURL string) {
         }
         fmt.Printf("Firing at %q...\t", coord)
         result, _ := http.FireAtOpp(gameURL, authToken, coord)
-        yourRawShots = append(yourRawShots, coord)
+        yourShots = append(yourShots, coord)
         fmt.Printf("%s\n", result.Result)
         time.Sleep(time.Second)
-        stillShooting = result.Result == "hit"
+        hit := result.Result == "hit"
+        sunk := result.Result == "sunk"
+        stillShooting = hit || sunk
         if stillShooting {
-          oppRawCoords = append(oppRawCoords, coord)
+          oppCoords = append(oppCoords, coord)
         }
         fmt.Print("\033[H\033[2J")
       }
@@ -257,11 +190,8 @@ func Game(gameURL string) {
       fmt.Printf("Unknown option %s\n", option)
     }
     gameInfo, _ = http.GetGameStatus(gameURL, authToken)   
-
+    oppShots = gameInfo.OppShots
+    DisplayBoard(gameBoard, yourCoords, yourShots, oppCoords, oppShots)
     DisplayPlayers(&gameInfo)
-    yourShots = ConvertToCoordinates(yourRawShots)
-    opponentsCoords = ConvertToCoordinates(oppRawCoords)
-    oppShots = ConvertToCoordinates(gameInfo.OppShots)
-    DisplayBoard(&yourCoords, &yourShots, &opponentsCoords, &oppShots)
   }
 }
